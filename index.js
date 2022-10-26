@@ -9,8 +9,8 @@ app.listen(process.env.puerto, ()=>{
     console.log("Servidor http en puerto ", process.env.puerto)
 })
 
-//CREAR SQUEMA
-const schema = new GraphQLSchema({
+//CREAR SQUEMA 
+const schema =  new GraphQLSchema({
     query: new GraphQLObjectType({
         name: "RootQueryType",
         fields: {
