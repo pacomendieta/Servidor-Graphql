@@ -22,16 +22,7 @@ const schema =  new GraphQLSchema({
 })
 
 
-const root = { 
-    saludo:   ()=>{ console.log('Hola MUndo')},
-    clientes: ()=>{ return clientes },
-    addCliente: (datos)=>{
-        var cli = {id:counter, nombre: datos.nombre, telefono:datos.telefono }
-        clientes.push( cli )
-        counter++
-        return cli
-    }
-}
+
 
 
 // RUTA / 
@@ -42,8 +33,9 @@ app.get ('/',function(req,res) {
     res.render("paghome")
 }  )
 
-let clientes=[];
-let counter=1;
+
+
+//Definir SCHEMA
 let schemaClientes = buildSchema(`
     type Cliente {
         id: Int
@@ -52,12 +44,26 @@ let schemaClientes = buildSchema(`
     }
     type Query {
         clientes: [Cliente]
-        cliente(id:Int):Cliente
+        cliente (id:Int):Cliente
     }
     type Mutation {
         addCliente(id:Int, nombre:String, telefono:String ):Cliente
     }
 `)
+//Definir ROOT: Funciones usadas en el SCHEME
+let clientes=[];
+let counter=1;
+const root = { 
+    cliente:   (datos)=>{ return clientes[datos.id-1]},
+    clientes: ()=>{ return clientes },
+    addCliente: (datos)=>{
+        var cli = {id:counter, nombre: datos.nombre, telefono:datos.telefono }
+        clientes.push( cli )
+        counter++
+        return cli
+    }
+}
+
 
 app.use('/graphql', graphqlHTTP({
     schema: schemaClientes,
