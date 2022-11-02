@@ -42,35 +42,54 @@ let schemaClientes = buildSchema(`
         nombre: String
         telefono: String
     }
+    type Curso {
+        id: ID!
+        title: String!
+        views: Int
+    }
     type Query {
         clientes: [Cliente]
         cliente (id:Int):Cliente
+        getCursos: [Curso]
     }
     type Mutation {
         addCliente(id:Int, nombre:String, telefono:String ):Cliente
     }
 `)
 //Definir ROOT: Funciones usadas en el SCHEME
-let clientes=[];
+let bdclientes=[{id:1,nombre:'paco', telefono:'616444444'}];
+bdcursos = require('./cursos.js')
+//let bdcursos=[{title:'curso 1', views:19}]
 let counter=1;
 const root = { 
-    cliente:   (datos)=>{ return clientes[datos.id-1]},
-    clientes: ()=>{ return clientes },
-    addCliente: (datos)=>{
+    cliente:   (datos)=>{ return bdclientes[datos.id-1]}, //Query 'cliente'
+    clientes: ()=>{ return bdclientes },                  //Query 'clientes'
+    addCliente: (datos)=>{       //Mutation: addCliente
         var cli = {id:counter, nombre: datos.nombre, telefono:datos.telefono }
-        clientes.push( cli )
+        bdclientes.push( cli )
         counter++
         return cli
-    }
+    },
+    getCursos: ()=> {return bdcursos}
 }
 
-
+//PAGINA HTML CON CLIENTE graphQL online
 app.use('/graphql', graphqlHTTP({
     schema: schemaClientes,
     rootValue: root,
-    graphiql: true,
+    graphiql: true,  //true:  PAGINA HTML CON CLIENTE graphQL online
 }));
  
+app.use('/clientes', function(req,res) {
+    graphql( 
+        {
+         schema: schemaClientes,              //objeto schema
+         source:`{clientes {id nombre}, getCursos{title views} }`,     //query
+         rootValue: root                      //objeto root
+        })
+    .then(r=>{ res.send(r) })
+    .catch(error=>{console.log("Error:",error); res.send("Error:")})
+});
 
 
 //SERVIDOR HTTP
