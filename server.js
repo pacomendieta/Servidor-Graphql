@@ -2,6 +2,7 @@ const express=require('express')
 const { GraphQLSchema, GraphQLObjectType, GraphQLString, graphql} = require('graphql')
 var { buildSchema } = require('graphql');
 var { graphqlHTTP } = require('express-graphql');
+const { updateFunctionExpression } = require('typescript');
 
 const app = express();
 
@@ -37,6 +38,14 @@ app.get ('/',function(req,res) {
 
 //Definir SCHEMA
 let schemaClientes = buildSchema(`
+    input CursoInput {
+        title: String!
+        views: Int
+    }
+    input ClienteInput {
+        nombre: String
+        telefono: String
+    }
     type Cliente {
         id: Int
         nombre: String
@@ -47,13 +56,20 @@ let schemaClientes = buildSchema(`
         title: String!
         views: Int
     }
+    type Mensaje {
+        mensaje: String
+    }
     type Query {
         clientes: [Cliente]
         cliente (id:Int):Cliente
-        getCursos: [Curso]
+        getCursos(pagina:Int=0,porpagina:Int=5): [Curso]
+        getCurso(id:ID):Curso
     }
     type Mutation {
-        addCliente(id:Int, nombre:String, telefono:String ):Cliente
+        addCliente(input:ClienteInput ):Cliente
+        addCurso(input:CursoInput):Curso
+        updateCurso(id:ID, input:CursoInput):Curso
+        deleteCurso(id:ID):Mensaje
     }
 `)
 //Definir ROOT: Funciones usadas en el SCHEME
@@ -64,13 +80,38 @@ let counter=1;
 const root = { 
     cliente:   (datos)=>{ return bdclientes[datos.id-1]}, //Query 'cliente'
     clientes: ()=>{ return bdclientes },                  //Query 'clientes'
-    addCliente: (datos)=>{       //Mutation: addCliente
-        var cli = {id:counter, nombre: datos.nombre, telefono:datos.telefono }
+    addCliente: ({input})=>{       //Mutation: addCliente
+        const {nombre,telefono} = input
+        var cli = {id:counter, nombre: nombre, telefono: telefono }
         bdclientes.push( cli )
         counter++
         return cli
     },
-    getCursos: ()=> {return bdcursos}
+    getCursos: ({pagina,porpagina})=> {
+        return bdcursos.slice(pagina*porpagina, (pagina+1)*porpagina)
+    },
+    getCurso( {id} ) {
+        return bdcursos.find((curso)=>curso.id ==id )
+    },
+    addCurso({input}) {
+        const {title,views} = input
+        const curso = {title,views,id:String(bdcursos.length +1)}
+        bdcursos.push(curso)
+        return curso
+    },
+    updateCurso({id,input} ){
+        const {title, views} = input
+        const pos = bdcursos.findIndex((curso)=>curso.id==id )
+        if (!pos) return null;
+        const curso = {id, ...input}
+        bdcursos[pos] = curso
+        return curso
+    },
+    deleteCurso({id}) {
+        bdcursos = bdcursos.filter((curso)=>curso.id != id )
+        return { mensaje: `El curso con id=${id} ha sido eliminado`}
+    }
+    
 }
 
 //PAGINA HTML CON CLIENTE graphQL online
@@ -84,7 +125,7 @@ app.use('/clientes', function(req,res) {
     graphql( 
         {
          schema: schemaClientes,              //objeto schema
-         source:`{clientes {id nombre}, getCursos{title views} }`,     //query
+         source:`{clientes {id nombre}, getCursos{title views} }`,  //query a mostrar
          rootValue: root                      //objeto root
         })
     .then(r=>{ res.send(r) })
